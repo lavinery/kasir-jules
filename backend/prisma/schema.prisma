@@ -4,8 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -43,7 +43,7 @@ model Product {
   name        String
   description String?
   barcode     String?  @unique
-  price       Decimal  @db.Decimal(10, 2)
+  price       Decimal
   stock       Int      @default(0)
   minStock    Int      @default(10)
   categoryId  Int?
@@ -67,8 +67,8 @@ model Member {
   email         String?
   phone         String?
   address       String?
-  discountRate  Decimal  @default(0.05) @db.Decimal(3, 2) // 5% default
-  totalPurchase Decimal  @default(0) @db.Decimal(12, 2)
+  discountRate  Decimal  @default(0.05)
+  totalPurchase Decimal  @default(0)
   visitCount    Int      @default(0)
   lastVisit     DateTime?
   isActive      Boolean  @default(true)
@@ -84,14 +84,14 @@ model Member {
 model Sale {
   id                  Int      @id @default(autoincrement())
   saleNumber          String   @unique // TRX-001-20240315
-  subtotal            Decimal  @db.Decimal(12, 2)
-  memberDiscount      Decimal  @default(0) @db.Decimal(12, 2)
-  transactionDiscount Decimal  @default(0) @db.Decimal(12, 2)
-  totalDiscount       Decimal  @default(0) @db.Decimal(12, 2)
-  tax                 Decimal  @default(0) @db.Decimal(12, 2)
-  total               Decimal  @db.Decimal(12, 2)
-  cashAmount          Decimal? @db.Decimal(12, 2)
-  change              Decimal? @db.Decimal(12, 2)
+  subtotal            Decimal
+  memberDiscount      Decimal  @default(0)
+  transactionDiscount Decimal  @default(0)
+  totalDiscount       Decimal  @default(0)
+  tax                 Decimal  @default(0)
+  total               Decimal
+  cashAmount          Decimal?
+  change              Decimal?
   paymentMethod       String   @default("cash") // cash, card, digital
   memberId            Int?
   userId              Int
@@ -113,9 +113,9 @@ model SaleItem {
   saleId    Int
   productId Int
   quantity  Int
-  price     Decimal @db.Decimal(10, 2) // Price at time of sale
-  subtotal  Decimal @db.Decimal(12, 2)
-  discount  Decimal @default(0) @db.Decimal(12, 2)
+  price     Decimal // Price at time of sale
+  subtotal  Decimal
+  discount  Decimal @default(0)
 
   // Relations
   sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
@@ -147,7 +147,7 @@ model StockMovement {
 model Settings {
   id    Int    @id @default(autoincrement())
   key   String @unique
-  value String @db.Text
+  value String
   type  String @default("STRING") // STRING, NUMBER, BOOLEAN, JSON
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
