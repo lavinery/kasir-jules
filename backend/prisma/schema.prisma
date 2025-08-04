@@ -1,0 +1,156 @@
+// backend/prisma/schema.prisma - Enhanced schema with favorites support
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   // admin, kasir, gudang
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sales           Sale[]
+  stockMovements  StockMovement[]
+
+  @@map("users")
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  barcode     String?  @unique
+  price       Decimal  @db.Decimal(10, 2)
+  stock       Int      @default(0)
+  minStock    Int      @default(10)
+  categoryId  Int?
+  image       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  category       Category?       @relation(fields: [categoryId], references: [id])
+  saleItems      SaleItem[]
+  stockMovements StockMovement[]
+
+  @@map("products")
+}
+
+model Member {
+  id            Int      @id @default(autoincrement())
+  memberId      String   @unique // MBR001, MBR002, etc.
+  name          String
+  email         String?
+  phone         String?
+  address       String?
+  discountRate  Decimal  @default(0.05) @db.Decimal(3, 2) // 5% default
+  totalPurchase Decimal  @default(0) @db.Decimal(12, 2)
+  visitCount    Int      @default(0)
+  lastVisit     DateTime?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  sales Sale[]
+
+  @@map("members")
+}
+
+model Sale {
+  id                  Int      @id @default(autoincrement())
+  saleNumber          String   @unique // TRX-001-20240315
+  subtotal            Decimal  @db.Decimal(12, 2)
+  memberDiscount      Decimal  @default(0) @db.Decimal(12, 2)
+  transactionDiscount Decimal  @default(0) @db.Decimal(12, 2)
+  totalDiscount       Decimal  @default(0) @db.Decimal(12, 2)
+  tax                 Decimal  @default(0) @db.Decimal(12, 2)
+  total               Decimal  @db.Decimal(12, 2)
+  cashAmount          Decimal? @db.Decimal(12, 2)
+  change              Decimal? @db.Decimal(12, 2)
+  paymentMethod       String   @default("cash") // cash, card, digital
+  memberId            Int?
+  userId              Int
+  notes               String?
+  receiptPrinted      Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  member Member? @relation(fields: [memberId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
+  items  SaleItem[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id        Int     @id @default(autoincrement())
+  saleId    Int
+  productId Int
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2) // Price at time of sale
+  subtotal  Decimal @db.Decimal(12, 2)
+  discount  Decimal @default(0) @db.Decimal(12, 2)
+
+  // Relations
+  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("sale_items")
+}
+
+model StockMovement {
+  id            Int      @id @default(autoincrement())
+  productId     Int
+  type          String   // IN, OUT, ADJUSTMENT
+  quantity      Int      // Positive for IN, negative for OUT
+  previousStock Int
+  newStock      Int
+  saleId        Int?     // If related to a sale
+  reference     String?  // Reference number or note
+  notes         String?
+  userId        Int?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@map("stock_movements")
+}
+
+model Settings {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String @db.Text
+  type  String @default("STRING") // STRING, NUMBER, BOOLEAN, JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
